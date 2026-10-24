@@ -1,0 +1,36 @@
+name: Nifty 50 Wyckoff Scan
+
+on:
+  schedule:
+    # NSE closes at 15:30 IST. IST is UTC+5:30 and India does NOT observe DST,
+    # so a single fixed-UTC cron stays aligned year-round (unlike the US
+    # scanner, which needs two DST-keyed crons). 10:05 UTC = 15:35 IST, ~5 min
+    # after the close so the final daily bar has settled.
+    - cron: "5 10 * * 1-5"
+  workflow_dispatch: {}
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python src/nifty_scanner.py
+        env:
+          TWELVEDATA_API_KEY: ${{ secrets.TWELVEDATA_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pytest
+      - run: python -m pytest tests/ -v
